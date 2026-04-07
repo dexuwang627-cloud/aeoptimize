@@ -1,27 +1,43 @@
-# aeo-cli
+# aeoptimize
 
-CLI toolkit + Claude Code skills that transform SEO-optimized websites into AI-search-ready content.
+[![npm version](https://img.shields.io/npm/v/aeoptimize.svg)](https://www.npmjs.com/package/aeoptimize)
+[![license](https://img.shields.io/npm/l/aeoptimize.svg)](https://github.com/dexuwang627-cloud/aeoptimize/blob/main/LICENSE)
 
-AI search engines (ChatGPT, Perplexity, Google AI Overview) don't rank pages — they cite content. `aeo-cli` helps you make your content citable.
+**CLI toolkit + Claude Code skills that transform SEO-optimized websites into AI-search-ready content.**
 
-## Quick Start
+AI search engines (ChatGPT, Perplexity, Google AI Overview) don't rank pages — they **cite** content. `aeoptimize` helps you make your content citable.
 
 ```bash
-# Scan any website
 npx aeoptimize scan https://your-site.com
-
-# Scan local build output
-npx aeoptimize scan ./dist
-
-# Generate AI infrastructure files
-npx aeoptimize generate ./dist
 ```
 
-## What It Does
+```
+AEO Readability Report
+Score: 61/100  AI Readability: Good
 
-### `aeo scan` — AI Readability Audit
+  Structure        ██████████████░░░░░░ 18/25
+  Citability       ████████████░░░░░░░░ 16/25
+  Schema           ███████░░░░░░░░░░░░░  7/20
+  AI Metadata      ███████░░░░░░░░░░░░░  8/15
+  Content Density  ███████████████░░░░░ 12/15
 
-Analyzes your content across 5 dimensions and gives a 0-100 score:
+Top Suggestions:
+  → Add FAQ section with question-format headings
+  → Add AI-relevant schema types
+  → Create and link an llms.txt file
+```
+
+## Features
+
+### Scan — AI Readability Audit
+
+17 rules across 5 dimensions, 0-100 score. Zero cost, offline capable, deterministic.
+
+```bash
+npx aeoptimize scan https://example.com          # Remote URL
+npx aeoptimize scan ./dist                        # Local directory
+npx aeoptimize scan ./dist --json                 # Machine-readable
+```
 
 | Dimension | Max | What it measures |
 |-----------|-----|------------------|
@@ -31,30 +47,48 @@ Analyzes your content across 5 dimensions and gives a 0-100 score:
 | **AI Metadata** | 15 | llms.txt, robots.txt AI config, meta description |
 | **Content Density** | 15 | Content vs boilerplate, keyword stuffing detection |
 
+### Multi-AI Scoring
+
+Score with multiple AI engines simultaneously. Detects `gemini` and `copilot` CLIs, dispatches parallel scoring, merges with rule engine.
+
 ```bash
-npx aeoptimize scan https://example.com        # Remote URL
-npx aeoptimize scan ./dist                      # Local directory
-npx aeoptimize scan ./dist --json               # Machine-readable output
+npx aeoptimize scan https://example.com --multi-ai
 ```
 
-### `aeo generate` — AI Infrastructure Files
+```
+Score: 72/100 (Rule Engine: 61 | AI Consensus: 83)
 
-Generates everything AI crawlers need to understand your site:
+  Rule Engine      ████████████░░░░░░░░ 61/100
+  Claude           ████████████████░░░░ 85/100
+  Gemini           ████████████████░░░░ 81/100
 
+AI Insights:
+  Claude:  "FAQ section lacks schema markup"
+  Gemini:  "Missing llms.txt reduces discoverability"
+```
+
+| Scenario | Weighting |
+|----------|-----------|
+| Rule engine + 2+ AIs | 50% rules + 50% AI average |
+| Rule engine + 1 AI | 60% rules + 40% AI |
+| Rule engine only | 100% rules |
+
+### Generate — AI Infrastructure Files
+
+```bash
+npx aeoptimize generate ./dist --dry-run          # Preview
+npx aeoptimize generate ./dist                    # Write files
+```
+
+Generates:
 - **llms.txt** — Machine-readable site summary ([llmstxt.org](https://llmstxt.org) standard)
 - **llms-full.txt** — Full content for deep AI consumption
 - **JSON-LD schemas** — Article, FAQPage, BreadcrumbList
 - **robots.txt suggestions** — AI crawler allow/deny rules
 
-```bash
-npx aeoptimize generate ./dist --dry-run        # Preview first
-npx aeoptimize generate ./dist                  # Write files
-npx aeoptimize generate ./dist --json           # Machine-readable
-```
+### Transform — AI Content Restructuring (Claude Code Skill)
 
-### `aeo transform` — AI Content Restructuring (Skill Only)
-
-Available as a Claude Code skill — uses your existing subscription, no extra cost:
+Uses your existing Claude subscription — zero extra cost:
 
 - Split long paragraphs into citable statements
 - Extract implicit Q&A into FAQ schema
@@ -64,21 +98,15 @@ Available as a Claude Code skill — uses your existing subscription, no extra c
 
 ## Claude Code Skills
 
-Install as a Claude Code plugin for interactive, AI-powered optimization:
-
 ```bash
 claude plugin marketplace add dexuwang627-cloud/aeoptimize
 ```
 
-Then use in any conversation:
-
-- `/aeo-scan` — Interactive audit with discussion
+- `/aeo-scan` — Interactive audit with multi-AI scoring
 - `/aeo-generate` — Guided file generation with preview
 - `/aeo-transform` — AI-powered content restructuring
 
 ## Why AEO?
-
-Traditional SEO optimizes for ranking algorithms. AEO optimizes for AI comprehension.
 
 | | SEO | AEO |
 |---|---|---|
@@ -88,18 +116,7 @@ Traditional SEO optimizes for ranking algorithms. AEO optimizes for AI comprehen
 | **Content style** | Keyword-rich | Self-contained, structured |
 | **Structured data** | Nice to have | Essential |
 
-67% of users now get their first answer from AI — if your content can't be extracted and cited, it's invisible.
-
-## Scoring Methodology
-
-Each rule produces a score based on heuristic analysis (no LLM required):
-
-- **17 rules** across 5 dimensions
-- **Zero cost** — pure static analysis
-- **Offline capable** — works without internet for local files
-- **Deterministic** — same input always produces same score
-
-The scoring weights (25/25/20/15/15) prioritize structure and citability because these factors most strongly correlate with AI citation rates.
+67% of users now get their first answer from AI. If your content can't be extracted and cited, it's invisible.
 
 ## License
 
