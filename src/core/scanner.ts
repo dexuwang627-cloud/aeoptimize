@@ -4,6 +4,7 @@ import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import type {
   ParsedDocument,
+  JsonLdObject,
   Heading,
   Link,
   PageAnalysis,
@@ -42,7 +43,7 @@ export function parseHtml(html: string, url: string): ParsedDocument {
   });
 
   // Extract JSON-LD
-  const jsonLd: object[] = [];
+  const jsonLd: JsonLdObject[] = [];
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
       const parsed = JSON.parse($(el).html() || '');

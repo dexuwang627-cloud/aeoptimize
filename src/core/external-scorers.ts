@@ -1,9 +1,8 @@
-import { execFile, exec } from 'node:child_process';
+import { spawn, exec } from 'node:child_process';
 import { promisify } from 'node:util';
 import type { AiScorerResult, AiSource, DimensionScores } from './types.js';
 import { buildScoringPrompt, parseAiResponse } from './ai-prompt.js';
 
-const execFileAsync = promisify(execFile);
 const execAsync = promisify(exec);
 
 const TIMEOUT_MS = 60_000;
@@ -82,22 +81,32 @@ export async function scoreWithExternalCLI(
   }
 }
 
-async function runGemini(prompt: string): Promise<string> {
-  // gemini CLI: pass prompt as positional argument
-  const { stdout } = await execAsync(`echo ${JSON.stringify(prompt)} | gemini`, {
-    timeout: TIMEOUT_MS,
-    maxBuffer: 1024 * 1024,
+function runWithStdin(cmd: string, input: string): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const child = spawn(cmd, [], {
+      stdio: ['pipe', 'pipe', 'pipe'],
+      timeout: TIMEOUT_MS,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (d: Buffer) => { stdout += d.toString(); });
+    child.stderr.on('data', (d: Buffer) => { stderr += d.toString(); });
+    child.on('close', (code) => {
+      if (code === 0) resolve(stdout);
+      else reject(new Error(`${cmd} exited with code ${code}: ${stderr.slice(0, 200)}`));
+    });
+    child.on('error', reject);
+    child.stdin.write(input);
+    child.stdin.end();
   });
-  return stdout;
+}
+
+async function runGemini(prompt: string): Promise<string> {
+  return runWithStdin('gemini', prompt);
 }
 
 async function runCopilot(prompt: string): Promise<string> {
-  // copilot CLI: pass prompt via stdin pipe
-  const { stdout } = await execAsync(`echo ${JSON.stringify(prompt)} | copilot`, {
-    timeout: TIMEOUT_MS,
-    maxBuffer: 1024 * 1024,
-  });
-  return stdout;
+  return runWithStdin('copilot', prompt);
 }
 
 export async function scoreWithAllAvailable(
@@ -105,21 +114,21 @@ export async function scoreWithAllAvailable(
   url: string,
   available: AvailableCLIs,
 ): Promise<AiScorerResult[]> {
-  const tasks: Promise<AiScorerResult>[] = [];
+  const tasks: { source: AiSource; promise: Promise<AiScorerResult> }[] = [];
 
   if (available.gemini) {
-    tasks.push(scoreWithExternalCLI('gemini', html, url));
+    tasks.push({ source: 'gemini', promise: scoreWithExternalCLI('gemini', html, url) });
   }
   if (available.copilot) {
-    tasks.push(scoreWithExternalCLI('copilot', html, url));
+    tasks.push({ source: 'copilot', promise: scoreWithExternalCLI('copilot', html, url) });
   }
 
-  const results = await Promise.allSettled(tasks);
+  const results = await Promise.allSettled(tasks.map((t) => t.promise));
 
-  return results.map((r) => {
+  return results.map((r, i) => {
     if (r.status === 'fulfilled') return r.value;
     return {
-      source: 'gemini' as AiSource,
+      source: tasks[i].source,
       score: 0,
       dimensions: { structure: 0, citability: 0, schema: 0, aiMetadata: 0, contentDensity: 0, total: 0 },
       insight: 'Scorer failed unexpectedly',

@@ -48,6 +48,12 @@ export interface Link {
   rel?: string;
 }
 
+export interface JsonLdObject {
+  '@type'?: string;
+  '@context'?: string;
+  [key: string]: unknown;
+}
+
 export interface ParsedDocument {
   url: string;
   title: string;
@@ -56,7 +62,7 @@ export interface ParsedDocument {
   frontmatter?: Record<string, unknown>;
   headings: Heading[];
   paragraphs: string[];
-  jsonLd: object[];
+  jsonLd: JsonLdObject[];
   metaTags: Record<string, string>;
   links: Link[];
   rawText: string;

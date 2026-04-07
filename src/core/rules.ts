@@ -129,7 +129,7 @@ const faqPresence: ScoringRule = {
     const suggestions: Suggestion[] = [];
 
     const hasFaqHeading = doc.headings.some((h) => /faq|frequently asked|common questions/i.test(h.text));
-    const hasFaqSchema = doc.jsonLd.some((ld: any) => ld['@type'] === 'FAQPage');
+    const hasFaqSchema = doc.jsonLd.some((ld) => ld['@type'] === 'FAQPage');
     const hasQuestionHeadings = doc.headings.filter((h) => h.text.endsWith('?')).length >= 2;
 
     let score = 0;
@@ -303,11 +303,11 @@ const attribution: ScoringRule = {
     let score = 0;
 
     // Check for author metadata
-    const hasAuthor = doc.metaTags['author'] || doc.metaTags['article:author'] || doc.jsonLd.some((ld: any) => ld.author);
+    const hasAuthor = doc.metaTags['author'] || doc.metaTags['article:author'] || doc.jsonLd.some((ld) => ld.author);
     if (hasAuthor) score += 2;
 
     // Check for date
-    const hasDate = doc.metaTags['article:published_time'] || doc.metaTags['date'] || doc.jsonLd.some((ld: any) => ld.datePublished);
+    const hasDate = doc.metaTags['article:published_time'] || doc.metaTags['date'] || doc.jsonLd.some((ld) => ld.datePublished);
     if (hasDate) score += 2;
 
     // Check for source citations in content
@@ -367,8 +367,7 @@ const jsonLdCompleteness: ScoringRule = {
 
     for (const ld of doc.jsonLd) {
       checked++;
-      const obj = ld as Record<string, unknown>;
-      const missing = requiredFields.filter((f) => !obj[f]);
+      const missing = requiredFields.filter((f) => !ld[f]);
 
       if (missing.length === 0) {
         totalScore += 7;
@@ -377,7 +376,7 @@ const jsonLdCompleteness: ScoringRule = {
         issues.push({
           dimension: 'schema',
           severity: 'warning',
-          message: `JSON-LD (${obj['@type'] || 'unknown'}) missing fields: ${missing.join(', ')}`,
+          message: `JSON-LD (${ld['@type'] || 'unknown'}) missing fields: ${missing.join(', ')}`,
         });
       }
     }
@@ -385,10 +384,9 @@ const jsonLdCompleteness: ScoringRule = {
     const score = Math.round(totalScore / checked);
 
     // Check for author/datePublished on Article types
-    const articles = doc.jsonLd.filter((ld: any) => /article/i.test(ld['@type'] || ''));
+    const articles = doc.jsonLd.filter((ld) => /article/i.test(ld['@type'] || ''));
     for (const article of articles) {
-      const obj = article as Record<string, unknown>;
-      if (!obj.author) {
+      if (!article.author) {
         suggestions.push({
           dimension: 'schema',
           action: 'Add author field to Article schema',
@@ -396,7 +394,7 @@ const jsonLdCompleteness: ScoringRule = {
           detail: 'Articles with author attribution are more likely to be cited by AI.',
         });
       }
-      if (!obj.datePublished) {
+      if (!article.datePublished) {
         suggestions.push({
           dimension: 'schema',
           action: 'Add datePublished to Article schema',
@@ -418,7 +416,7 @@ const aiRelevantSchemaTypes: ScoringRule = {
     const suggestions: Suggestion[] = [];
 
     const aiRelevantTypes = ['Article', 'FAQPage', 'HowTo', 'Product', 'Organization', 'BreadcrumbList', 'WebPage', 'TechArticle'];
-    const foundTypes = new Set(doc.jsonLd.map((ld: any) => ld['@type']).filter(Boolean));
+    const foundTypes = new Set(doc.jsonLd.map((ld) => ld['@type']).filter(Boolean));
     const relevantFound = aiRelevantTypes.filter((t) => foundTypes.has(t));
 
     let score: number;

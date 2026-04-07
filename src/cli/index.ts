@@ -179,9 +179,7 @@ function resolveTarget(target: string, isDir?: boolean): ScanTarget {
   }
   // Looks like a local path — hint the user
   if (target.startsWith('./') || target.startsWith('/') || target.startsWith('..')) {
-    console.error(chalk.yellow(`Hint: "${target}" looks like a local path. Use --dir flag to scan directories.`));
-    console.error(chalk.yellow(`  npx aeoptimize scan ${target} --dir`));
-    process.exit(1);
+    throw new Error(`"${target}" looks like a local path. Use --dir flag: npx aeoptimize scan ${target} --dir`);
   }
   // Fallback: assume URL with https
   return { type: 'url', path: `https://${target}` };
@@ -329,7 +327,11 @@ function printMultiAiReport(report: MultiAiReport): void {
 
   // Consensus score
   const scoreColor = report.consensusScore >= 70 ? chalk.green : report.consensusScore >= 40 ? chalk.yellow : chalk.red;
-  console.log(`  ${chalk.bold('Score:')} ${scoreColor.bold(String(report.consensusScore))}${chalk.dim('/100')} (Rule Engine: ${report.ruleScore} | AI Consensus: ${report.aiScores.filter((s) => s.available).length > 0 ? Math.round(report.aiScores.filter((s) => s.available).reduce((sum, s) => sum + s.score, 0) / report.aiScores.filter((s) => s.available).length) : 'N/A'})`);
+  const availableScores = report.aiScores.filter((s) => s.available);
+  const aiConsensus = availableScores.length > 0
+    ? String(Math.round(availableScores.reduce((sum, s) => sum + s.score, 0) / availableScores.length))
+    : 'N/A';
+  console.log(`  ${chalk.bold('Score:')} ${scoreColor.bold(String(report.consensusScore))}${chalk.dim('/100')} (Rule Engine: ${report.ruleScore} | AI Consensus: ${aiConsensus})`);
   console.log('');
 
   // Source breakdown
@@ -343,14 +345,16 @@ function printMultiAiReport(report: MultiAiReport): void {
   }
   console.log('');
 
-  // Dimension breakdown (from rule engine)
+  // Dimension breakdown (from rule engine — averaged if multiple pages)
   console.log(chalk.bold('  Dimension Breakdown (Rule Engine):'));
-  const ruleOverall = { ...report.overall, total: report.ruleScore };
-  printDimensionBar('Structure', report.pages[0]?.scores.structure ?? 0, 25);
-  printDimensionBar('Citability', report.pages[0]?.scores.citability ?? 0, 25);
-  printDimensionBar('Schema', report.pages[0]?.scores.schema ?? 0, 20);
-  printDimensionBar('AI Metadata', report.pages[0]?.scores.aiMetadata ?? 0, 15);
-  printDimensionBar('Content Density', report.pages[0]?.scores.contentDensity ?? 0, 15);
+  const dims = report.pages.length === 1
+    ? report.pages[0].scores
+    : { structure: Math.round(report.pages.reduce((s, p) => s + p.scores.structure, 0) / report.pages.length), citability: Math.round(report.pages.reduce((s, p) => s + p.scores.citability, 0) / report.pages.length), schema: Math.round(report.pages.reduce((s, p) => s + p.scores.schema, 0) / report.pages.length), aiMetadata: Math.round(report.pages.reduce((s, p) => s + p.scores.aiMetadata, 0) / report.pages.length), contentDensity: Math.round(report.pages.reduce((s, p) => s + p.scores.contentDensity, 0) / report.pages.length), total: 0 };
+  printDimensionBar('Structure', dims.structure, 25);
+  printDimensionBar('Citability', dims.citability, 25);
+  printDimensionBar('Schema', dims.schema, 20);
+  printDimensionBar('AI Metadata', dims.aiMetadata, 15);
+  printDimensionBar('Content Density', dims.contentDensity, 15);
   console.log('');
 
   // AI Insights

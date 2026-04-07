@@ -22,7 +22,7 @@ export function generateLlmsTxt(report: ScanReport, siteInfo: SiteInfo): string 
     lines.push('## Pages');
     lines.push('');
     for (const page of report.pages) {
-      const url = page.url.startsWith('http') ? page.url : page.url;
+      const url = page.url;
       lines.push(`- [${page.title}](${url}): AI readability score ${page.scores.total}/100`);
     }
     lines.push('');
@@ -51,7 +51,7 @@ export function generateLlmsFullTxt(report: ScanReport, pages: ParsedDocument[])
 }
 
 export function generateJsonLd(doc: ParsedDocument): object[] {
-  const existing = new Set(doc.jsonLd.map((ld: any) => ld['@type']));
+  const existing = new Set(doc.jsonLd.map((ld) => ld['@type']).filter(Boolean));
   const generated: object[] = [];
 
   // Add Article if not present and looks like an article
