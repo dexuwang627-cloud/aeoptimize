@@ -23,10 +23,11 @@ program
   .command('scan <target>')
   .description('Scan a URL or directory for AI readability')
   .option('--json', 'Output raw JSON report')
+  .option('--dir', 'Treat target as a local directory instead of a URL')
   .option('--multi-ai', 'Score with multiple AI engines (gemini, copilot) if available')
-  .action(async (target: string, options: { json?: boolean; multiAi?: boolean }) => {
+  .action(async (target: string, options: { json?: boolean; dir?: boolean; multiAi?: boolean }) => {
     try {
-      const scanTarget = resolveTarget(target);
+      const scanTarget = resolveTarget(target, options.dir);
       const report = await scan(scanTarget);
 
       if (options.multiAi) {
@@ -159,16 +160,19 @@ program.parse();
 
 // ── Helpers ────────────────────────────────────────────────────────
 
-function resolveTarget(target: string): ScanTarget {
+function resolveTarget(target: string, isDir?: boolean): ScanTarget {
+  if (isDir) {
+    return { type: 'directory', path: target };
+  }
   if (target.startsWith('http://') || target.startsWith('https://')) {
     return { type: 'url', path: target };
   }
-  // If it looks like a domain (contains a dot but no path separator), treat as URL
+  // Bare domain (contains a dot, no path separator) → treat as URL
   if (target.includes('.') && !target.includes('/') && !target.includes('\\')) {
     return { type: 'url', path: `https://${target}` };
   }
-  // Could be file or directory — stat will determine
-  return { type: 'directory', path: target };
+  // Fallback: assume URL with https
+  return { type: 'url', path: `https://${target}` };
 }
 
 function detectSiteName(dir: string, report: ScanReport): string {

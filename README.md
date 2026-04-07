@@ -8,7 +8,7 @@
 AI search engines (ChatGPT, Perplexity, Google AI Overview) don't rank pages — they **cite** content. `aeoptimize` helps you make your content citable.
 
 ```bash
-npx aeoptimize scan https://your-site.com
+npx aeoptimize scan your-site.com
 ```
 
 ```
@@ -35,8 +35,8 @@ Top Suggestions:
 
 ```bash
 npx aeoptimize scan https://example.com          # Remote URL
-npx aeoptimize scan ./dist                        # Local directory
-npx aeoptimize scan ./dist --json                 # Machine-readable
+npx aeoptimize scan ./dist --dir                   # Local directory
+npx aeoptimize scan ./dist --dir --json            # Machine-readable
 ```
 
 | Dimension | Max | What it measures |
@@ -76,7 +76,7 @@ AI Insights:
 ### Generate — AI Infrastructure Files
 
 ```bash
-npx aeoptimize generate ./dist --dry-run          # Preview
+npx aeoptimize generate ./dist --dry-run           # Preview
 npx aeoptimize generate ./dist                    # Write files
 ```
 
