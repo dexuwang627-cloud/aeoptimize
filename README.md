@@ -96,6 +96,32 @@ Uses your existing Claude subscription — zero extra cost:
 - Fix dangling references ("This...", "It...", "They...")
 - Inject structured data
 
+## Framework Plugins
+
+### Vite
+
+```ts
+// vite.config.ts
+import { aeoPlugin } from 'aeoptimize/vite';
+
+export default defineConfig({
+  plugins: [aeoPlugin()]
+});
+```
+
+### Next.js
+
+```ts
+// next.config.mjs
+import { withAeo } from 'aeoptimize/next';
+
+export default withAeo({});
+```
+
+Build 時自動生成 `llms.txt`、`llms-full.txt`、`_aeo/generated-schemas.json` 並印出 AEO 分數。
+
+Options: `{ silent?: boolean; outDir?: string }`
+
 ## Claude Code Skills
 
 ```bash

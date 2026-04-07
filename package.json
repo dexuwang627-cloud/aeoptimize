@@ -1,6 +1,6 @@
 {
   "name": "aeoptimize",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "CLI toolkit that transforms SEO-optimized websites into AI-search-ready content",
   "type": "module",
   "main": "./dist/core/index.js",
@@ -9,7 +9,9 @@
     "aeo-cli": "./dist/cli/index.js"
   },
   "exports": {
-    ".": "./dist/core/index.js"
+    ".": "./dist/core/index.js",
+    "./vite": "./dist/plugins/vite.js",
+    "./next": "./dist/plugins/next.js"
   },
   "files": [
     "dist/",
@@ -34,7 +36,9 @@
     "structured-data",
     "json-ld",
     "generative-engine-optimization",
-    "claude-code-skill"
+    "claude-code-skill",
+    "vite-plugin",
+    "nextjs-plugin"
   ],
   "license": "MIT",
   "engines": {
