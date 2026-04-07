@@ -285,6 +285,32 @@ async function checkLlmsTxt(url: string): Promise<boolean> {
   }
 }
 
+async function fetchWithPuppeteer(url: string): Promise<{ html: string; rendered: boolean }> {
+  try {
+    // Dynamic import — puppeteer is an optional peer dependency
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const puppeteer = await (Function('return import("puppeteer")')()) as any;
+    const browser = await puppeteer.default.launch({ headless: true, args: ['--no-sandbox'] });
+    try {
+      const page = await browser.newPage();
+      await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
+      const html = await page.content();
+      return { html, rendered: true };
+    } finally {
+      await browser.close();
+    }
+  } catch {
+    return { html: '', rendered: false };
+  }
+}
+
+function isSpaLikely(html: string): boolean {
+  // Heuristic: very few content tags relative to file size suggests SPA
+  const contentTags = (html.match(/<(?:p|h[1-6]|li|article|main)[>\s]/gi) || []).length;
+  const scripts = (html.match(/<script/gi) || []).length;
+  return contentTags < 10 && scripts > 3;
+}
+
 export async function scanUrl(url: string): Promise<ScanReport> {
   validateUrl(url);
   const [response, hasLlmsTxt] = await Promise.all([
@@ -295,7 +321,22 @@ export async function scanUrl(url: string): Promise<ScanReport> {
     throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
   }
 
-  const html = await response.text();
+  let html = await response.text();
+  let renderedWithBrowser = false;
+
+  // If page looks like an SPA, try puppeteer for full rendering
+  if (isSpaLikely(html)) {
+    const result = await fetchWithPuppeteer(url);
+    if (result.rendered) {
+      html = result.html;
+      renderedWithBrowser = true;
+    } else {
+      console.warn('[aeoptimize] This page appears to be a JavaScript-rendered SPA.');
+      console.warn('[aeoptimize] Install puppeteer for accurate scoring: npm i -D puppeteer');
+      console.warn('[aeoptimize] Without it, scores may be lower than actual content quality.\n');
+    }
+  }
+
   const doc = parseHtml(html, url);
 
   // Inject llms.txt discovery into metaTags so rules can pick it up
