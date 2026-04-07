@@ -24,7 +24,7 @@ Transform SEO-optimized content into AI-search-ready format using language under
 
 2. **Read and analyze.** For each file:
    - Read the full content
-   - Run `npx aeo-cli scan <file> --json` to get the current score
+   - Run `npx @cucuwang/aeo-cli scan <file> --json` to get the current score
    - Identify which strategies apply based on the issues found
 
 3. **Transform incrementally.** Apply one strategy at a time:
@@ -40,7 +40,7 @@ Transform SEO-optimized content into AI-search-ready format using language under
    - Keep all existing data, quotes, and references intact
 
 5. **Verify improvement.** After all transforms:
-   - Re-run `npx aeo-cli scan <file> --json`
+   - Re-run `npx @cucuwang/aeo-cli scan <file> --json`
    - Show before/after score comparison
    - Highlight which dimensions improved
 

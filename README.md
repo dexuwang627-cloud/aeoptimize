@@ -8,13 +8,13 @@ AI search engines (ChatGPT, Perplexity, Google AI Overview) don't rank pages —
 
 ```bash
 # Scan any website
-npx aeo-cli scan https://your-site.com
+npx @cucuwang/aeo-cli scan https://your-site.com
 
 # Scan local build output
-npx aeo-cli scan ./dist
+npx @cucuwang/aeo-cli scan ./dist
 
 # Generate AI infrastructure files
-npx aeo-cli generate ./dist
+npx @cucuwang/aeo-cli generate ./dist
 ```
 
 ## What It Does
@@ -32,9 +32,9 @@ Analyzes your content across 5 dimensions and gives a 0-100 score:
 | **Content Density** | 15 | Content vs boilerplate, keyword stuffing detection |
 
 ```bash
-npx aeo-cli scan https://example.com        # Remote URL
-npx aeo-cli scan ./dist                      # Local directory
-npx aeo-cli scan ./dist --json               # Machine-readable output
+npx @cucuwang/aeo-cli scan https://example.com        # Remote URL
+npx @cucuwang/aeo-cli scan ./dist                      # Local directory
+npx @cucuwang/aeo-cli scan ./dist --json               # Machine-readable output
 ```
 
 ### `aeo generate` — AI Infrastructure Files
@@ -47,9 +47,9 @@ Generates everything AI crawlers need to understand your site:
 - **robots.txt suggestions** — AI crawler allow/deny rules
 
 ```bash
-npx aeo-cli generate ./dist --dry-run        # Preview first
-npx aeo-cli generate ./dist                  # Write files
-npx aeo-cli generate ./dist --json           # Machine-readable
+npx @cucuwang/aeo-cli generate ./dist --dry-run        # Preview first
+npx @cucuwang/aeo-cli generate ./dist                  # Write files
+npx @cucuwang/aeo-cli generate ./dist --json           # Machine-readable
 ```
 
 ### `aeo transform` — AI Content Restructuring (Skill Only)
