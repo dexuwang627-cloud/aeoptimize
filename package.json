@@ -1,0 +1,54 @@
+{
+  "name": "aeo-cli",
+  "version": "0.1.0",
+  "description": "CLI toolkit that transforms SEO-optimized websites into AI-search-ready content",
+  "type": "module",
+  "main": "./dist/core/index.js",
+  "bin": {
+    "aeo": "./dist/cli/index.js",
+    "aeo-cli": "./dist/cli/index.js"
+  },
+  "exports": {
+    ".": "./dist/core/index.js"
+  },
+  "files": [
+    "dist/",
+    "skills/",
+    "agents/",
+    ".claude-plugin/",
+    "README.md",
+    "LICENSE"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "prepublishOnly": "npm test && npm run build"
+  },
+  "keywords": [
+    "aeo",
+    "seo",
+    "ai-search",
+    "llms-txt",
+    "structured-data",
+    "json-ld",
+    "generative-engine-optimization",
+    "claude-code-skill"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "dependencies": {
+    "chalk": "^5.3.0",
+    "cheerio": "^1.0.0",
+    "commander": "^12.0.0",
+    "gray-matter": "^4.0.3"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "typescript": "^5.4.0",
+    "vitest": "^2.0.0"
+  }
+}

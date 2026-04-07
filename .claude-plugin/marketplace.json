@@ -1,0 +1,19 @@
+{
+  "name": "aeo-cli",
+  "owner": {
+    "name": "Te-Shu Wang"
+  },
+  "metadata": {
+    "description": "AI search optimization: scan, generate, and transform website content for AI readability",
+    "version": "0.1.0"
+  },
+  "plugins": [
+    {
+      "name": "aeo-cli",
+      "source": "./",
+      "description": "CLI toolkit + Claude Code skills for transforming SEO-optimized websites into AI-search-ready content",
+      "category": "seo",
+      "tags": ["aeo", "seo", "ai-search", "llms-txt", "structured-data"]
+    }
+  ]
+}
