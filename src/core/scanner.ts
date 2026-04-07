@@ -285,12 +285,32 @@ async function checkLlmsTxt(url: string): Promise<boolean> {
   }
 }
 
+function findChromePath(): string | null {
+  const { execSync } = require('node:child_process');
+  const candidates = process.platform === 'darwin'
+    ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium']
+    : process.platform === 'win32'
+      ? ['C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe', 'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe']
+      : ['/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'];
+
+  for (const p of candidates) {
+    try { require('node:fs').accessSync(p); return p; } catch { /* next */ }
+  }
+  // Try `which`
+  try { return execSync('which google-chrome || which chromium', { encoding: 'utf-8' }).trim() || null; } catch { return null; }
+}
+
 async function fetchWithPuppeteer(url: string): Promise<{ html: string; rendered: boolean }> {
+  const chromePath = findChromePath();
+  if (!chromePath) return { html: '', rendered: false };
+
   try {
-    // Dynamic import — puppeteer is an optional peer dependency
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const puppeteer = await (Function('return import("puppeteer")')()) as any;
-    const browser = await puppeteer.default.launch({ headless: true, args: ['--no-sandbox'] });
+    const puppeteer = await import('puppeteer-core');
+    const browser = await puppeteer.default.launch({
+      headless: true,
+      executablePath: chromePath,
+      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+    });
     try {
       const page = await browser.newPage();
       await page.goto(url, { waitUntil: 'networkidle2', timeout: 30000 });
@@ -332,8 +352,8 @@ export async function scanUrl(url: string): Promise<ScanReport> {
       renderedWithBrowser = true;
     } else {
       console.warn('[aeoptimize] This page appears to be a JavaScript-rendered SPA.');
-      console.warn('[aeoptimize] Install puppeteer for accurate scoring: npm i -D puppeteer');
-      console.warn('[aeoptimize] Without it, scores may be lower than actual content quality.\n');
+      console.warn('[aeoptimize] Install Chrome/Chromium for accurate scoring of JS-rendered sites.');
+      console.warn('[aeoptimize] Without a browser, scores may be lower than actual content quality.\n');
     }
   }
 
