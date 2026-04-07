@@ -600,31 +600,51 @@ const keywordStuffingDetection: ScoringRule = {
       return { score: 5, maxScore: 5, issues, suggestions };
     }
 
-    // Count word frequency, excluding stop words and common technical acronyms
     const stopWords = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'has', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'way', 'who', 'did', 'get', 'let', 'say', 'she', 'too', 'use', 'that', 'this', 'with', 'from', 'have', 'been', 'they', 'their', 'will', 'would', 'could', 'should', 'about', 'which', 'when', 'what', 'there', 'where', 'your', 'more', 'some', 'than', 'them', 'into', 'other', 'also', 'just', 'only', 'very', 'does', 'each']);
-    // Topic words (2-4 chars) that naturally repeat in domain-specific content
-    const topicWords = new Set(['ai', 'api', 'seo', 'aeo', 'geo', 'css', 'url', 'llm', 'sql', 'cli', 'sdk', 'html', 'http', 'data', 'code', 'app', 'web']);
-    const freq = new Map<string, number>();
-
-    for (const word of words) {
-      if (stopWords.has(word) || topicWords.has(word)) continue;
-      freq.set(word, (freq.get(word) || 0) + 1);
+    const contentWords = words.filter((w) => !stopWords.has(w));
+    if (contentWords.length < 20) {
+      return { score: 5, maxScore: 5, issues, suggestions };
     }
 
-    const threshold = words.length * 0.05; // 5% — stricter than 3% to avoid penalizing topic words
-    const stuffed = [...freq.entries()].filter(([, count]) => count > threshold).sort((a, b) => b[1] - a[1]);
+    // Signal 1: Vocabulary diversity — natural writing has diverse word choice
+    const uniqueWords = new Set(contentWords).size;
+    const diversity = uniqueWords / contentWords.length; // 0-1, higher = more diverse
 
-    if (stuffed.length > 0) {
-      const topStuffed = stuffed.slice(0, 3).map(([word, count]) => `"${word}" (${((count / words.length) * 100).toFixed(1)}%)`);
-      issues.push({
-        dimension: 'contentDensity',
-        severity: 'warning',
-        message: `Potential keyword stuffing: ${topStuffed.join(', ')}. AI engines penalize repetitive content.`,
-      });
-      return { score: 1, maxScore: 5, issues, suggestions: [{ dimension: 'contentDensity', action: 'Reduce keyword repetition', impact: 'high', detail: 'Use synonyms and natural language variation instead of repeating the same terms.' }] };
+    // Signal 2: Consecutive repetition — same word appearing in adjacent sentences
+    const sentences = doc.rawText.split(/[.!?]+/).filter((s) => s.trim().length > 10);
+    let consecutiveHits = 0;
+    if (sentences.length >= 2) {
+      const freq = new Map<string, number>();
+      for (const word of contentWords) freq.set(word, (freq.get(word) || 0) + 1);
+      // Find top 3 most frequent content words
+      const topWords = [...freq.entries()].sort((a, b) => b[1] - a[1]).slice(0, 3).map(([w]) => w);
+
+      for (const word of topWords) {
+        let streak = 0;
+        for (let i = 1; i < sentences.length; i++) {
+          const prevHas = sentences[i - 1].toLowerCase().includes(word);
+          const currHas = sentences[i].toLowerCase().includes(word);
+          if (prevHas && currHas) streak++;
+        }
+        // If word appears in >60% of consecutive sentence pairs, it's stuffed
+        if (streak / (sentences.length - 1) > 0.6) consecutiveHits++;
+      }
     }
 
-    return { score: 5, maxScore: 5, issues, suggestions };
+    let score = 5;
+
+    // Low diversity + high consecutive repetition = stuffing
+    if (diversity < 0.25 && consecutiveHits >= 2) {
+      score = 0;
+      issues.push({ dimension: 'contentDensity', severity: 'warning', message: `Low vocabulary diversity (${(diversity * 100).toFixed(0)}%) with repetitive phrasing. This pattern signals keyword stuffing to AI engines.` });
+      suggestions.push({ dimension: 'contentDensity', action: 'Diversify vocabulary and vary sentence structure', impact: 'high', detail: 'Use synonyms, rephrase repeated concepts, and ensure each sentence adds unique value.' });
+    } else if (diversity < 0.3 || consecutiveHits >= 2) {
+      score = 2;
+      issues.push({ dimension: 'contentDensity', severity: 'warning', message: `${diversity < 0.3 ? `Low vocabulary diversity (${(diversity * 100).toFixed(0)}%).` : ''} ${consecutiveHits >= 2 ? 'Repetitive keyword patterns detected across sentences.' : ''}`.trim() });
+      suggestions.push({ dimension: 'contentDensity', action: 'Reduce keyword repetition', impact: 'medium', detail: 'Use synonyms and natural language variation instead of repeating the same terms.' });
+    }
+
+    return { score, maxScore: 5, issues, suggestions };
   },
 };
 

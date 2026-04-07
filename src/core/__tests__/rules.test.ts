@@ -107,22 +107,25 @@ describe('paragraph-length', () => {
 describe('keyword-stuffing-detection', () => {
   const rule = allRules.find((r) => r.id === 'keyword-stuffing-detection')!;
 
-  it('detects keyword stuffing', () => {
-    // Use non-topic words that repeat excessively (>5%)
-    const stuffed = ('optimization tips optimization guide optimization strategy optimization tools optimization ranking ' +
-      'optimization experts optimization methods optimization performance optimization results optimization campaigns ').repeat(5);
-    const doc = makeDoc({ rawText: stuffed });
+  it('detects keyword stuffing via low diversity + consecutive repetition', () => {
+    // Artificially stuffed: same words hammered into every sentence
+    const stuffed = 'Buy cheap widgets now. Cheap widgets are the best widgets. ' +
+      'Our widgets are cheap widgets for sale. Get cheap widgets today. ' +
+      'Cheap widgets online cheap widgets store cheap widgets deals. ' +
+      'Best cheap widgets cheap widgets review cheap widgets comparison. ' +
+      'Order cheap widgets cheap widgets shipping cheap widgets discount.';
+    const doc = makeDoc({ rawText: stuffed.repeat(3) });
     const result = rule.evaluate(doc);
     expect(result.score).toBeLessThan(result.maxScore);
     expect(result.issues.length).toBeGreaterThan(0);
   });
 
-  it('passes natural content', () => {
-    const natural = 'The quick brown fox jumps over the lazy dog. ' +
-      'Search engine optimization involves many different techniques. ' +
-      'Content quality matters more than keyword density in modern algorithms. ' +
-      'Users prefer websites that provide genuine value and clear information. ' +
-      'The best approach combines technical excellence with compelling writing.';
+  it('passes natural content even with topic-specific terms', () => {
+    const natural = 'Artificial intelligence is transforming how search engines deliver results. ' +
+      'Modern language models understand context and nuance in ways traditional algorithms cannot. ' +
+      'Content creators should focus on clarity, structure, and providing genuine value to readers. ' +
+      'The emergence of answer engines means websites need to be optimized for direct citation. ' +
+      'Structured data helps machines parse and understand the relationships between concepts.';
     const doc = makeDoc({ rawText: natural.repeat(3) });
     const result = rule.evaluate(doc);
     expect(result.score).toBe(result.maxScore);
