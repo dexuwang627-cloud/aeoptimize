@@ -262,7 +262,20 @@ export async function scanDirectory(dirPath: string): Promise<ScanReport> {
   return { pages, overall, summary, timestamp: new Date().toISOString() };
 }
 
+function validateUrl(raw: string): URL {
+  const u = new URL(raw);
+  if (u.protocol !== 'https:' && u.protocol !== 'http:') {
+    throw new Error(`Unsupported scheme: ${u.protocol}. Only http and https are allowed.`);
+  }
+  const blocked = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|localhost$)/i;
+  if (blocked.test(u.hostname)) {
+    throw new Error('Scanning private/loopback addresses is not allowed.');
+  }
+  return u;
+}
+
 export async function scanUrl(url: string): Promise<ScanReport> {
+  validateUrl(url);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);

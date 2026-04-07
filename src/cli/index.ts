@@ -121,6 +121,20 @@ program
 
       const outDir = options.out || dir;
 
+      // Validate output directory exists and is within a reasonable scope
+      if (options.out) {
+        try {
+          const outStats = await stat(options.out);
+          if (!outStats.isDirectory()) {
+            console.error(chalk.red('Error: --out must be a directory'));
+            process.exit(1);
+          }
+        } catch {
+          console.error(chalk.red(`Error: Output directory "${options.out}" does not exist.`));
+          process.exit(1);
+        }
+      }
+
       if (options.dryRun) {
         console.log(chalk.cyan.bold('\n📋 Dry Run — Files that would be generated:\n'));
         console.log(chalk.white.bold('llms.txt:'));

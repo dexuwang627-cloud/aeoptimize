@@ -24,12 +24,22 @@ export function mergeScores(ruleReport: ScanReport, aiScores: AiScorerResult[]):
     methodology = `Rule engine (50%) + AI average [${sources}] (50%)`;
   }
 
+  // Merge per-dimension scores if AI data available
+  const aiDims = averageAiDimensions(availableAiScores);
+  const ruleWeight = availableAiScores.length >= 2 ? 0.5 : availableAiScores.length === 1 ? 0.6 : 1.0;
+  const aiWeight = 1.0 - ruleWeight;
+
+  const mergedOverall: DimensionScores = { ...ruleReport.overall, total: consensusScore };
+  if (aiDims) {
+    const dims: (keyof Omit<DimensionScores, 'total'>)[] = ['structure', 'citability', 'schema', 'aiMetadata', 'contentDensity'];
+    for (const dim of dims) {
+      mergedOverall[dim] = Math.round(ruleReport.overall[dim] * ruleWeight + aiDims[dim] * aiWeight);
+    }
+  }
+
   return {
     ...ruleReport,
-    overall: {
-      ...ruleReport.overall,
-      total: consensusScore,
-    },
+    overall: mergedOverall,
     ruleScore,
     aiScores,
     consensusScore,
