@@ -274,15 +274,35 @@ function validateUrl(raw: string): URL {
   return u;
 }
 
+async function checkLlmsTxt(url: string): Promise<boolean> {
+  try {
+    const u = new URL(url);
+    const llmsUrl = `${u.protocol}//${u.host}/llms.txt`;
+    const res = await fetch(llmsUrl, { method: 'HEAD', redirect: 'follow' });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function scanUrl(url: string): Promise<ScanReport> {
   validateUrl(url);
-  const response = await fetch(url);
+  const [response, hasLlmsTxt] = await Promise.all([
+    fetch(url),
+    checkLlmsTxt(url),
+  ]);
   if (!response.ok) {
     throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
   }
 
   const html = await response.text();
   const doc = parseHtml(html, url);
+
+  // Inject llms.txt discovery into metaTags so rules can pick it up
+  if (hasLlmsTxt && !doc.metaTags['llms-txt']) {
+    doc.metaTags['llms-txt'] = '/llms.txt';
+  }
+
   const analysis = scanDocument(doc);
 
   return {
