@@ -163,6 +163,10 @@ function resolveTarget(target: string): ScanTarget {
   if (target.startsWith('http://') || target.startsWith('https://')) {
     return { type: 'url', path: target };
   }
+  // If it looks like a domain (contains a dot but no path separator), treat as URL
+  if (target.includes('.') && !target.includes('/') && !target.includes('\\')) {
+    return { type: 'url', path: `https://${target}` };
+  }
   // Could be file or directory — stat will determine
   return { type: 'directory', path: target };
 }
