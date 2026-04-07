@@ -22,9 +22,9 @@ describe('parseHtml', () => {
   });
 
   it('handles minimal HTML without crashing', () => {
-    const doc = parseHtml('<html><body><p>Hello</p></body></html>', 'test.html');
+    const doc = parseHtml('<html><body><p>This is a test paragraph with enough words.</p></body></html>', 'test.html');
     expect(doc.title).toBe('test.html');
-    expect(doc.paragraphs).toEqual(['Hello']);
+    expect(doc.paragraphs).toEqual(['This is a test paragraph with enough words.']);
     expect(doc.jsonLd).toEqual([]);
   });
 });

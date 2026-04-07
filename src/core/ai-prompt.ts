@@ -40,11 +40,28 @@ export interface AiScoreResponse {
 
 export function parseAiResponse(raw: string): AiScoreResponse | null {
   try {
-    // Extract JSON from response (may have surrounding text)
-    const jsonMatch = raw.match(/\{[\s\S]*?"score"[\s\S]*?\}/);
-    if (!jsonMatch) return null;
+    // Try to extract a balanced JSON object containing "score"
+    // First try: find the last { before "score" and match to its closing }
+    const scoreIdx = raw.indexOf('"score"');
+    if (scoreIdx === -1) return null;
 
-    const parsed = JSON.parse(jsonMatch[0]);
+    // Walk backward to find the opening brace
+    let braceStart = raw.lastIndexOf('{', scoreIdx);
+    if (braceStart === -1) return null;
+
+    // Walk forward to find the matching closing brace
+    let depth = 0;
+    let braceEnd = -1;
+    for (let i = braceStart; i < raw.length; i++) {
+      if (raw[i] === '{') depth++;
+      else if (raw[i] === '}') {
+        depth--;
+        if (depth === 0) { braceEnd = i; break; }
+      }
+    }
+    if (braceEnd === -1) return null;
+
+    const parsed = JSON.parse(raw.slice(braceStart, braceEnd + 1));
 
     // Validate required fields
     if (typeof parsed.score !== 'number') return null;

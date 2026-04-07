@@ -2,7 +2,7 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { writeFile, mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
 import { scan, scanDirectory, parseHtml, scanUrl } from '../core/scanner.js';
 import { generate } from '../core/generator.js';
@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name('aeo')
   .description('CLI toolkit that transforms SEO-optimized websites into AI-search-ready content')
-  .version('0.1.0');
+  .version('0.3.0');
 
 // ── scan command ───────────────────────────────────────────────────
 
@@ -27,11 +27,17 @@ program
   .option('--multi-ai', 'Score with multiple AI engines (gemini, copilot) if available')
   .action(async (target: string, options: { json?: boolean; dir?: boolean; multiAi?: boolean }) => {
     try {
+      if (!target || target.trim().length === 0) {
+        console.error(chalk.red('Error: Please provide a URL or directory path.'));
+        console.error(chalk.dim('  npx aeoptimize scan example.com'));
+        console.error(chalk.dim('  npx aeoptimize scan ./dist --dir'));
+        process.exit(1);
+      }
       const scanTarget = resolveTarget(target, options.dir);
       const report = await scan(scanTarget);
 
       if (options.multiAi) {
-        const multiReport = await runMultiAiScan(report, target);
+        const multiReport = await runMultiAiScan(report, target, !!options.json);
         if (options.json) {
           console.log(JSON.stringify(multiReport, null, 2));
         } else {
@@ -171,6 +177,12 @@ function resolveTarget(target: string, isDir?: boolean): ScanTarget {
   if (target.includes('.') && !target.includes('/') && !target.includes('\\')) {
     return { type: 'url', path: `https://${target}` };
   }
+  // Looks like a local path — hint the user
+  if (target.startsWith('./') || target.startsWith('/') || target.startsWith('..')) {
+    console.error(chalk.yellow(`Hint: "${target}" looks like a local path. Use --dir flag to scan directories.`));
+    console.error(chalk.yellow(`  npx aeoptimize scan ${target} --dir`));
+    process.exit(1);
+  }
   // Fallback: assume URL with https
   return { type: 'url', path: `https://${target}` };
 }
@@ -266,34 +278,43 @@ function printDimensionBar(label: string, score: number, max: number): void {
   console.log(`  ${labelPad} ${bar} ${color(String(score))}${chalk.dim('/' + max)}`);
 }
 
-async function runMultiAiScan(ruleReport: ScanReport, target: string): Promise<MultiAiReport> {
-  console.log(chalk.dim('\n  Detecting AI CLIs...'));
+async function runMultiAiScan(ruleReport: ScanReport, target: string, silent = false): Promise<MultiAiReport> {
+  if (!silent) console.log(chalk.dim('\n  Detecting AI CLIs...'));
   const available = await detectAvailableCLIs();
 
   const found: string[] = [];
   if (available.gemini) found.push('gemini');
   if (available.copilot) found.push('copilot');
 
-  if (found.length > 0) {
-    console.log(chalk.dim(`  Found: ${found.join(', ')}`));
-    console.log(chalk.dim('  Requesting AI scores (this may take a moment)...\n'));
-  } else {
-    console.log(chalk.dim('  No external AI CLIs found. Using rule engine only.\n'));
+  if (!silent) {
+    if (found.length > 0) {
+      console.log(chalk.dim(`  Found: ${found.join(', ')}`));
+      console.log(chalk.dim('  Requesting AI scores (this may take a moment)...\n'));
+    } else {
+      console.log(chalk.dim('  No external AI CLIs found. Using rule engine only.\n'));
+    }
   }
 
-  // Fetch HTML for AI scoring
+  // Resolve target URL for fetching HTML
+  const url = resolveTargetUrl(target);
   let html = '';
-  if (target.startsWith('http')) {
+  if (url) {
     try {
-      const response = await fetch(target);
+      const response = await fetch(url);
       html = await response.text();
     } catch {
       // Fall through with empty html
     }
   }
 
-  const aiScores = html ? await scoreWithAllAvailable(html, target, available) : [];
+  const aiScores = html ? await scoreWithAllAvailable(html, url || target, available) : [];
   return mergeScores(ruleReport, aiScores);
+}
+
+function resolveTargetUrl(target: string): string | null {
+  if (target.startsWith('http://') || target.startsWith('https://')) return target;
+  if (target.includes('.') && !target.includes('/') && !target.includes('\\')) return `https://${target}`;
+  return null;
 }
 
 function printMultiAiReport(report: MultiAiReport): void {

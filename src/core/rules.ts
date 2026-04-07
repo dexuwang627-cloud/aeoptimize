@@ -41,19 +41,22 @@ const headingHierarchy: ScoringRule = {
     }
 
     // Check for skipped levels (e.g., H1 -> H3)
+    let skipCount = 0;
     for (let i = 1; i < headings.length; i++) {
       const prev = headings[i - 1].level;
       const curr = headings[i].level;
       if (curr > prev + 1) {
-        score -= 2;
-        issues.push({
-          dimension: 'structure',
-          severity: 'warning',
-          message: `Heading level skipped: H${prev} → H${curr}. This confuses AI content parsing.`,
-        });
-        break;
+        skipCount++;
+        if (skipCount <= 3) {
+          issues.push({
+            dimension: 'structure',
+            severity: 'warning',
+            message: `Heading level skipped: H${prev} → H${curr}. This confuses AI content parsing.`,
+          });
+        }
       }
     }
+    if (skipCount > 0) score -= Math.min(3, skipCount);
 
     // Check heading count relative to content
     const wordCount = doc.rawText.split(/\s+/).length;
@@ -194,7 +197,8 @@ const selfContainedStatements: ScoringRule = {
     }
 
     // Heuristic: paragraphs starting with pronouns or relative references are not self-contained
-    const danglingStarts = /^(this|that|these|those|it|they|he|she|however|moreover|furthermore|additionally|also|but|and|or)\b/i;
+    // Only flag strong dangling references (pronouns/demonstratives), not conjunctions
+    const danglingStarts = /^(this|that|these|those|it|they|he|she|however|moreover|furthermore|additionally)\b/i;
     const danglingParagraphs = doc.paragraphs.filter((p) => danglingStarts.test(p.trim()));
     const ratio = danglingParagraphs.length / doc.paragraphs.length;
 
@@ -593,13 +597,13 @@ const keywordStuffingDetection: ScoringRule = {
     const issues: Issue[] = [];
     const suggestions: Suggestion[] = [];
 
-    const words = doc.rawText.toLowerCase().split(/\s+/).filter((w) => w.length > 3);
+    const words = doc.rawText.toLowerCase().split(/\s+/).filter((w) => w.length > 1);
     if (words.length < 50) {
       return { score: 5, maxScore: 5, issues, suggestions };
     }
 
     // Count word frequency, excluding common stop words
-    const stopWords = new Set(['that', 'this', 'with', 'from', 'have', 'been', 'they', 'their', 'will', 'would', 'could', 'should', 'about', 'which', 'when', 'what', 'there', 'where', 'your', 'more', 'some', 'than', 'them', 'into', 'other', 'also', 'just', 'only', 'very', 'does', 'each']);
+    const stopWords = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'has', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'way', 'who', 'did', 'get', 'let', 'say', 'she', 'too', 'use', 'that', 'this', 'with', 'from', 'have', 'been', 'they', 'their', 'will', 'would', 'could', 'should', 'about', 'which', 'when', 'what', 'there', 'where', 'your', 'more', 'some', 'than', 'them', 'into', 'other', 'also', 'just', 'only', 'very', 'does', 'each']);
     const freq = new Map<string, number>();
 
     for (const word of words) {

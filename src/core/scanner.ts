@@ -34,11 +34,11 @@ export function parseHtml(html: string, url: string): ParsedDocument {
     });
   });
 
-  // Extract paragraphs
+  // Extract paragraphs (from p, li, dd, and direct text in div/section)
   const paragraphs: string[] = [];
-  $('p').each((_, el) => {
+  $('p, li, dd').each((_, el) => {
     const text = $(el).text().trim();
-    if (text.length > 0) paragraphs.push(text);
+    if (text.length > 20) paragraphs.push(text);
   });
 
   // Extract JSON-LD
@@ -182,14 +182,11 @@ function aggregateScores(doc: ParsedDocument): { scores: DimensionScores; issues
     allSuggestions.push(...result.suggestions);
   }
 
-  // Dimension max points
-  const dimensionMaxPoints: Record<Dimension, number> = {
-    structure: 25,
-    citability: 25,
-    schema: 20,
-    aiMetadata: 15,
-    contentDensity: 15,
-  };
+  // Derive dimension max points from actual rule weights (not hardcoded)
+  const dimensionMaxPoints: Record<Dimension, number> = { structure: 0, citability: 0, schema: 0, aiMetadata: 0, contentDensity: 0 };
+  for (const rule of allRules) {
+    dimensionMaxPoints[rule.dimension] += rule.weight;
+  }
 
   const scores: DimensionScores = {
     structure: 0,
@@ -223,7 +220,13 @@ export function scanDocument(doc: ParsedDocument): PageAnalysis {
   };
 }
 
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
 export async function scanFile(filePath: string): Promise<PageAnalysis> {
+  const fileStats = await stat(filePath);
+  if (fileStats.size > MAX_FILE_SIZE) {
+    throw new Error(`File too large (${(fileStats.size / 1024 / 1024).toFixed(1)}MB). Maximum is 5MB.`);
+  }
   const content = await readFile(filePath, 'utf-8');
   const ext = extname(filePath).toLowerCase();
 

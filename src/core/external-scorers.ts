@@ -83,8 +83,8 @@ export async function scoreWithExternalCLI(
 }
 
 async function runGemini(prompt: string): Promise<string> {
-  // gemini CLI accepts prompt via -p flag
-  const { stdout } = await execFileAsync('gemini', ['-p', prompt], {
+  // gemini CLI: pass prompt as positional argument
+  const { stdout } = await execAsync(`echo ${JSON.stringify(prompt)} | gemini`, {
     timeout: TIMEOUT_MS,
     maxBuffer: 1024 * 1024,
   });
@@ -92,8 +92,8 @@ async function runGemini(prompt: string): Promise<string> {
 }
 
 async function runCopilot(prompt: string): Promise<string> {
-  // copilot CLI accepts prompt via -p flag
-  const { stdout } = await execFileAsync('copilot', ['-p', prompt], {
+  // copilot CLI: pass prompt via stdin pipe
+  const { stdout } = await execAsync(`echo ${JSON.stringify(prompt)} | copilot`, {
     timeout: TIMEOUT_MS,
     maxBuffer: 1024 * 1024,
   });

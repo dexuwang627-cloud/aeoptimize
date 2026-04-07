@@ -37,7 +37,11 @@ export function generateLlmsFullTxt(report: ScanReport, pages: ParsedDocument[])
   for (const page of pages) {
     lines.push(`## ${page.title}`);
     lines.push('');
-    lines.push(page.rawText.slice(0, 5000)); // Cap per page
+    const maxChars = 5000;
+    lines.push(page.rawText.slice(0, maxChars));
+    if (page.rawText.length > maxChars) {
+      lines.push(`\n[Content truncated: ${page.rawText.length} chars total, showing first ${maxChars}]`);
+    }
     lines.push('');
     lines.push('---');
     lines.push('');
@@ -69,15 +73,22 @@ export function generateJsonLd(doc: ParsedDocument): object[] {
     const questionHeadings = doc.headings.filter((h) => h.text.endsWith('?'));
     if (questionHeadings.length >= 2) {
       const mainEntity = questionHeadings.map((q) => {
-        // Find the paragraph after this heading
-        const idx = doc.headings.indexOf(q);
-        const nextHeadingIdx = idx + 1 < doc.headings.length ? doc.headings.indexOf(doc.headings[idx + 1]) : doc.headings.length;
-        // Simple heuristic: use the next paragraph
-        const answerParagraph = doc.paragraphs[idx] || 'Answer not extracted.';
+        // Find paragraphs that likely answer this question by searching rawText
+        // Look for content between this heading and the next heading
+        const qIdx = doc.rawText.indexOf(q.text);
+        let answer = 'Answer not extracted.';
+        if (qIdx !== -1) {
+          const afterQuestion = doc.rawText.slice(qIdx + q.text.length, qIdx + q.text.length + 500).trim();
+          // Take first sentence-like chunk
+          const firstChunk = afterQuestion.split(/\n\n|\.\s/)[0]?.trim();
+          if (firstChunk && firstChunk.length > 10) {
+            answer = firstChunk.endsWith('.') ? firstChunk : firstChunk + '.';
+          }
+        }
         return {
           '@type': 'Question',
           name: q.text,
-          acceptedAnswer: { '@type': 'Answer', text: answerParagraph },
+          acceptedAnswer: { '@type': 'Answer', text: answer },
         };
       });
 

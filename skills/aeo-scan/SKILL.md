@@ -54,7 +54,9 @@ Scan a website or build directory and produce an interactive AI readability repo
    - Expected score impact
    - Cross-reference insights from different AI scorers if they agree/disagree
 
-6. **Offer next steps:**
+6. **Deep analysis (optional).** If the user wants detailed per-page analysis, dispatch the `aeo-analyzer` agent with the page HTML and scan report. It provides issue-by-issue breakdown with before/after examples.
+
+7. **Offer next steps:**
    - Score below 50? Suggest running `/aeo-transform` on the worst pages
    - Missing llms.txt or schema? Suggest `/aeo-generate`
    - Score above 80? Congratulate and suggest monitoring over time
