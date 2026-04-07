@@ -108,8 +108,9 @@ describe('keyword-stuffing-detection', () => {
   const rule = allRules.find((r) => r.id === 'keyword-stuffing-detection')!;
 
   it('detects keyword stuffing', () => {
-    const stuffed = ('SEO tips SEO guide SEO strategy SEO tools SEO optimization SEO ranking ' +
-      'SEO experts SEO methods SEO performance SEO results SEO campaigns ').repeat(5);
+    // Use non-topic words that repeat excessively (>5%)
+    const stuffed = ('optimization tips optimization guide optimization strategy optimization tools optimization ranking ' +
+      'optimization experts optimization methods optimization performance optimization results optimization campaigns ').repeat(5);
     const doc = makeDoc({ rawText: stuffed });
     const result = rule.evaluate(doc);
     expect(result.score).toBeLessThan(result.maxScore);

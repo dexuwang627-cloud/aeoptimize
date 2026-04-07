@@ -600,16 +600,18 @@ const keywordStuffingDetection: ScoringRule = {
       return { score: 5, maxScore: 5, issues, suggestions };
     }
 
-    // Count word frequency, excluding common stop words
+    // Count word frequency, excluding stop words and common technical acronyms
     const stopWords = new Set(['the', 'and', 'for', 'are', 'but', 'not', 'you', 'all', 'can', 'had', 'her', 'was', 'one', 'our', 'out', 'has', 'his', 'how', 'its', 'may', 'new', 'now', 'old', 'see', 'way', 'who', 'did', 'get', 'let', 'say', 'she', 'too', 'use', 'that', 'this', 'with', 'from', 'have', 'been', 'they', 'their', 'will', 'would', 'could', 'should', 'about', 'which', 'when', 'what', 'there', 'where', 'your', 'more', 'some', 'than', 'them', 'into', 'other', 'also', 'just', 'only', 'very', 'does', 'each']);
+    // Topic words (2-4 chars) that naturally repeat in domain-specific content
+    const topicWords = new Set(['ai', 'api', 'seo', 'aeo', 'geo', 'css', 'url', 'llm', 'sql', 'cli', 'sdk', 'html', 'http', 'data', 'code', 'app', 'web']);
     const freq = new Map<string, number>();
 
     for (const word of words) {
-      if (stopWords.has(word)) continue;
+      if (stopWords.has(word) || topicWords.has(word)) continue;
       freq.set(word, (freq.get(word) || 0) + 1);
     }
 
-    const threshold = words.length * 0.03; // 3%
+    const threshold = words.length * 0.05; // 5% — stricter than 3% to avoid penalizing topic words
     const stuffed = [...freq.entries()].filter(([, count]) => count > threshold).sort((a, b) => b[1] - a[1]);
 
     if (stuffed.length > 0) {
