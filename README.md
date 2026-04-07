@@ -118,6 +118,14 @@ claude plugin marketplace add dexuwang627-cloud/aeoptimize
 
 67% of users now get their first answer from AI. If your content can't be extracted and cited, it's invisible.
 
+## Help
+
+```bash
+npx aeoptimize --help            # All commands
+npx aeoptimize scan --help       # Scan options
+npx aeoptimize generate --help   # Generate options
+```
+
 ## License
 
 MIT

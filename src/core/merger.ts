@@ -29,11 +29,12 @@ export function mergeScores(ruleReport: ScanReport, aiScores: AiScorerResult[]):
   const ruleWeight = availableAiScores.length >= 2 ? 0.5 : availableAiScores.length === 1 ? 0.6 : 1.0;
   const aiWeight = 1.0 - ruleWeight;
 
+  const dimMax: Record<string, number> = { structure: 25, citability: 25, schema: 20, aiMetadata: 15, contentDensity: 15 };
   const mergedOverall: DimensionScores = { ...ruleReport.overall, total: consensusScore };
   if (aiDims) {
     const dims: (keyof Omit<DimensionScores, 'total'>)[] = ['structure', 'citability', 'schema', 'aiMetadata', 'contentDensity'];
     for (const dim of dims) {
-      mergedOverall[dim] = Math.round(ruleReport.overall[dim] * ruleWeight + aiDims[dim] * aiWeight);
+      mergedOverall[dim] = Math.min(dimMax[dim], Math.round(ruleReport.overall[dim] * ruleWeight + aiDims[dim] * aiWeight));
     }
   }
 

@@ -2,9 +2,9 @@
 
 import { Command } from 'commander';
 import chalk from 'chalk';
-import { writeFile, mkdir, stat } from 'node:fs/promises';
-import { join } from 'node:path';
-import { scan, scanDirectory, parseHtml, scanUrl } from '../core/scanner.js';
+import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
+import { join, extname } from 'node:path';
+import { scan, scanDirectory, parseHtml, parseMarkdown, scanUrl } from '../core/scanner.js';
 import { generate } from '../core/generator.js';
 import { detectAvailableCLIs, scoreWithAllAvailable } from '../core/external-scorers.js';
 import { mergeScores } from '../core/merger.js';
@@ -80,15 +80,11 @@ program
         process.exit(1);
       }
 
-      // Re-parse pages to get full ParsedDocument
-      const { parseHtml, parseMarkdown } = await import('../core/scanner.js');
-      const { readFile: rf, readdir } = await import('node:fs/promises');
-      const { join: j, extname } = await import('node:path');
-
+      // Re-parse pages to get full ParsedDocument for generator
       const pages = [];
       for (const page of report.pages) {
         try {
-          const content = await rf(page.url, 'utf-8');
+          const content = await readFile(page.url, 'utf-8');
           const ext = extname(page.url).toLowerCase();
           if (ext === '.html' || ext === '.htm') {
             pages.push(parseHtml(content, page.url));
@@ -96,7 +92,7 @@ program
             pages.push(parseMarkdown(content, page.url));
           }
         } catch {
-          // Skip
+          // Skip unreadable files
         }
       }
 
@@ -109,7 +105,7 @@ program
       // Try to read existing robots.txt
       let existingRobots: string | null = null;
       try {
-        existingRobots = await rf(j(dir, 'robots.txt'), 'utf-8');
+        existingRobots = await readFile(join(dir, 'robots.txt'), 'utf-8');
       } catch { /* none */ }
 
       const output = generate(report, pages, siteInfo, existingRobots);
@@ -151,13 +147,13 @@ program
       }
 
       // Write files
-      await writeFile(j(outDir, 'llms.txt'), output.llmsTxt, 'utf-8');
-      await writeFile(j(outDir, 'llms-full.txt'), output.llmsFullTxt, 'utf-8');
+      await writeFile(join(outDir, 'llms.txt'), output.llmsTxt, 'utf-8');
+      await writeFile(join(outDir, 'llms-full.txt'), output.llmsFullTxt, 'utf-8');
 
       if (output.jsonLd.length > 0) {
-        const jsonLdDir = j(outDir, '_aeo');
+        const jsonLdDir = join(outDir, '_aeo');
         await mkdir(jsonLdDir, { recursive: true });
-        await writeFile(j(jsonLdDir, 'generated-schemas.json'), JSON.stringify(output.jsonLd, null, 2), 'utf-8');
+        await writeFile(join(jsonLdDir, 'generated-schemas.json'), JSON.stringify(output.jsonLd, null, 2), 'utf-8');
       }
 
       console.log(chalk.green.bold('\n✅ Generated AI infrastructure files:\n'));
@@ -200,11 +196,11 @@ function resolveTarget(target: string, isDir?: boolean): ScanTarget {
 }
 
 function detectSiteName(dir: string, report: ScanReport): string {
-  // Use the first page title or directory name
-  if (report.pages.length > 0) {
-    return report.pages[0].title.split('|')[0].split('-')[0].trim();
+  if (report.pages.length > 0 && report.pages[0].title) {
+    const name = report.pages[0].title.split('|')[0].split('-')[0].trim();
+    if (name) return name;
   }
-  return dir.split('/').pop() || 'Website';
+  return dir.split('/').filter(Boolean).pop() || 'Website';
 }
 
 function printReport(report: ScanReport): void {

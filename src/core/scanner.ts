@@ -28,7 +28,7 @@ export function parseHtml(html: string, url: string): ParsedDocument {
   // Extract headings
   const headings: Heading[] = [];
   $('h1, h2, h3, h4, h5, h6').each((_, el) => {
-    const tag = (el as any).tagName;
+    const tag = (el as { tagName: string }).tagName;
     headings.push({
       level: parseInt(tag.charAt(1), 10),
       text: $(el).text().trim(),
