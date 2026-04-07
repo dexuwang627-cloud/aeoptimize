@@ -104,3 +104,22 @@ export interface GenerateOutput {
   jsonLd: object[];
   robotsTxtSuggestions: string[];
 }
+
+// ── Multi-AI Scoring ───────────────────────────────────────────────
+
+export type AiSource = 'claude' | 'gemini' | 'copilot';
+
+export interface AiScorerResult {
+  source: AiSource;
+  score: number;
+  dimensions: DimensionScores;
+  insight: string;
+  available: boolean;
+}
+
+export interface MultiAiReport extends ScanReport {
+  ruleScore: number;
+  aiScores: AiScorerResult[];
+  consensusScore: number;
+  methodology: string;
+}

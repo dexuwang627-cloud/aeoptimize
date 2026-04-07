@@ -5,7 +5,7 @@ description: Use when auditing a website or build output for AI search readiness
 
 # AEO Scan — AI Readability Audit
 
-Scan a website or build directory and produce an interactive AI readability report.
+Scan a website or build directory and produce an interactive AI readability report. Supports multi-AI scoring with gemini and copilot CLIs.
 
 ## Scoring Dimensions (0-100)
 
@@ -21,25 +21,51 @@ Scan a website or build directory and produce an interactive AI readability repo
 
 1. **Identify target.** Ask the user for a URL or directory path. If in a project with a build output (e.g., `dist/`, `out/`, `.next/`, `build/`), suggest scanning that.
 
-2. **Run scan.** Execute:
+2. **Detect AI CLIs.** Check which AI tools are available:
+   ```
+   which gemini && which copilot
+   ```
+   Report which are found. If both are available, offer multi-AI scoring.
+
+3. **Run scan.** Choose based on available CLIs:
+
+   **If external AI CLIs available:**
+   ```
+   npx aeoptimize scan <target> --multi-ai --json
+   ```
+   This runs the rule engine + dispatches gemini/copilot for parallel scoring.
+
+   **If no external CLIs:**
    ```
    npx aeoptimize scan <target> --json
    ```
+   Then use the `aeo-ai-scorer` agent to add Claude's AI-level analysis on top of the rule engine score.
 
-3. **Present results.** Summarize the overall score and highlight:
+4. **Present results.** Show:
+   - **Consensus score** (rule engine + AI weighted average)
+   - **Per-scorer breakdown** (Rule Engine, Claude, Gemini, Copilot — whichever are available)
    - Dimensions scoring below 60% of their max
    - All critical issues
-   - Top 3 high-impact suggestions
+   - **AI insights** — each AI's one-sentence summary of the biggest issue
 
-4. **Discuss improvements.** For each weak dimension, explain:
+5. **Discuss improvements.** For each weak dimension, explain:
    - Why it matters for AI search visibility
    - Concrete steps to improve
    - Expected score impact
+   - Cross-reference insights from different AI scorers if they agree/disagree
 
-5. **Offer next steps:**
+6. **Offer next steps:**
    - Score below 50? Suggest running `/aeo-transform` on the worst pages
    - Missing llms.txt or schema? Suggest `/aeo-generate`
    - Score above 80? Congratulate and suggest monitoring over time
+
+## Multi-AI Scoring Methodology
+
+| Scenario | Weighting |
+|----------|-----------|
+| Rule engine + 2+ AIs | 50% rule engine + 50% AI average |
+| Rule engine + 1 AI | 60% rule engine + 40% AI |
+| Rule engine only | 100% rule engine |
 
 ## Important
 
@@ -47,4 +73,4 @@ Scan a website or build directory and produce an interactive AI readability repo
 - Present scores visually with context, not just numbers
 - Focus discussion on high-impact fixes first
 - If scanning a URL fails (CORS, timeout), suggest scanning the local build output instead
-- Version: 0.1.0
+- When using Claude as AI scorer (no external CLIs), dispatch the `aeo-ai-scorer` agent

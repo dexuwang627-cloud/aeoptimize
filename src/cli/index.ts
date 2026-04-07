@@ -4,9 +4,11 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import { readFile, writeFile, mkdir, stat } from 'node:fs/promises';
 import { join } from 'node:path';
-import { scan, scanDirectory, parseHtml } from '../core/scanner.js';
+import { scan, scanDirectory, parseHtml, scanUrl } from '../core/scanner.js';
 import { generate } from '../core/generator.js';
-import type { ScanReport, DimensionScores, ScanTarget, SiteInfo } from '../core/types.js';
+import { detectAvailableCLIs, scoreWithAllAvailable } from '../core/external-scorers.js';
+import { mergeScores } from '../core/merger.js';
+import type { ScanReport, MultiAiReport, DimensionScores, ScanTarget, SiteInfo, AiScorerResult } from '../core/types.js';
 
 const program = new Command();
 
@@ -21,16 +23,27 @@ program
   .command('scan <target>')
   .description('Scan a URL or directory for AI readability')
   .option('--json', 'Output raw JSON report')
-  .action(async (target: string, options: { json?: boolean }) => {
+  .option('--multi-ai', 'Score with multiple AI engines (gemini, copilot) if available')
+  .action(async (target: string, options: { json?: boolean; multiAi?: boolean }) => {
     try {
       const scanTarget = resolveTarget(target);
       const report = await scan(scanTarget);
 
-      if (options.json) {
-        console.log(JSON.stringify(report, null, 2));
+      if (options.multiAi) {
+        const multiReport = await runMultiAiScan(report, target);
+        if (options.json) {
+          console.log(JSON.stringify(multiReport, null, 2));
+        } else {
+          printMultiAiReport(multiReport);
+          printSkillCta();
+        }
       } else {
-        printReport(report);
-        printSkillCta();
+        if (options.json) {
+          console.log(JSON.stringify(report, null, 2));
+        } else {
+          printReport(report);
+          printSkillCta();
+        }
       }
     } catch (err) {
       console.error(chalk.red(`Error: ${(err as Error).message}`));
@@ -234,6 +247,121 @@ function printReport(report: ScanReport): void {
 }
 
 function printDimensionBar(label: string, score: number, max: number): void {
+  const pct = score / max;
+  const barWidth = 20;
+  const filled = Math.round(pct * barWidth);
+  const empty = barWidth - filled;
+  const color = pct >= 0.7 ? chalk.green : pct >= 0.4 ? chalk.yellow : chalk.red;
+
+  const bar = color('█'.repeat(filled)) + chalk.dim('░'.repeat(empty));
+  const labelPad = label.padEnd(16);
+  console.log(`  ${labelPad} ${bar} ${color(String(score))}${chalk.dim('/' + max)}`);
+}
+
+async function runMultiAiScan(ruleReport: ScanReport, target: string): Promise<MultiAiReport> {
+  console.log(chalk.dim('\n  Detecting AI CLIs...'));
+  const available = await detectAvailableCLIs();
+
+  const found: string[] = [];
+  if (available.gemini) found.push('gemini');
+  if (available.copilot) found.push('copilot');
+
+  if (found.length > 0) {
+    console.log(chalk.dim(`  Found: ${found.join(', ')}`));
+    console.log(chalk.dim('  Requesting AI scores (this may take a moment)...\n'));
+  } else {
+    console.log(chalk.dim('  No external AI CLIs found. Using rule engine only.\n'));
+  }
+
+  // Fetch HTML for AI scoring
+  let html = '';
+  if (target.startsWith('http')) {
+    try {
+      const response = await fetch(target);
+      html = await response.text();
+    } catch {
+      // Fall through with empty html
+    }
+  }
+
+  const aiScores = html ? await scoreWithAllAvailable(html, target, available) : [];
+  return mergeScores(ruleReport, aiScores);
+}
+
+function printMultiAiReport(report: MultiAiReport): void {
+  const { overall } = report;
+
+  console.log('');
+  console.log(chalk.bold('  AEO Readability Report (Multi-AI)'));
+  console.log(chalk.dim(`  ${report.timestamp}`));
+  console.log(chalk.dim(`  ${report.pages.length} page${report.pages.length > 1 ? 's' : ''} scanned`));
+  console.log(chalk.dim(`  ${report.methodology}`));
+  console.log('');
+
+  // Consensus score
+  const scoreColor = report.consensusScore >= 70 ? chalk.green : report.consensusScore >= 40 ? chalk.yellow : chalk.red;
+  console.log(`  ${chalk.bold('Score:')} ${scoreColor.bold(String(report.consensusScore))}${chalk.dim('/100')} (Rule Engine: ${report.ruleScore} | AI Consensus: ${report.aiScores.filter((s) => s.available).length > 0 ? Math.round(report.aiScores.filter((s) => s.available).reduce((sum, s) => sum + s.score, 0) / report.aiScores.filter((s) => s.available).length) : 'N/A'})`);
+  console.log('');
+
+  // Source breakdown
+  console.log(chalk.bold('  Scorer Breakdown:'));
+  printScoreBar('Rule Engine', report.ruleScore, 100);
+  for (const ai of report.aiScores) {
+    if (ai.available) {
+      const label = ai.source.charAt(0).toUpperCase() + ai.source.slice(1);
+      printScoreBar(label, ai.score, 100);
+    }
+  }
+  console.log('');
+
+  // Dimension breakdown (from rule engine)
+  console.log(chalk.bold('  Dimension Breakdown (Rule Engine):'));
+  const ruleOverall = { ...report.overall, total: report.ruleScore };
+  printDimensionBar('Structure', report.pages[0]?.scores.structure ?? 0, 25);
+  printDimensionBar('Citability', report.pages[0]?.scores.citability ?? 0, 25);
+  printDimensionBar('Schema', report.pages[0]?.scores.schema ?? 0, 20);
+  printDimensionBar('AI Metadata', report.pages[0]?.scores.aiMetadata ?? 0, 15);
+  printDimensionBar('Content Density', report.pages[0]?.scores.contentDensity ?? 0, 15);
+  console.log('');
+
+  // AI Insights
+  const availableAi = report.aiScores.filter((s) => s.available && s.insight);
+  if (availableAi.length > 0) {
+    console.log(chalk.magenta.bold('  AI Insights:'));
+    for (const ai of availableAi) {
+      const label = ai.source.charAt(0).toUpperCase() + ai.source.slice(1);
+      console.log(`  ${chalk.magenta(label + ':')} ${ai.insight}`);
+    }
+    console.log('');
+  }
+
+  // Issues and suggestions from rule engine
+  const allIssues = report.pages.flatMap((p) => p.issues);
+  const criticalIssues = allIssues.filter((i) => i.severity === 'critical');
+  if (criticalIssues.length > 0) {
+    console.log(chalk.red.bold('  Critical Issues:'));
+    for (const issue of criticalIssues.slice(0, 5)) {
+      console.log(`  ${chalk.red('✗')} ${issue.message}`);
+    }
+    console.log('');
+  }
+
+  const allSuggestions = report.pages.flatMap((p) => p.suggestions);
+  const highImpact = allSuggestions.filter((s) => s.impact === 'high');
+  if (highImpact.length > 0) {
+    console.log(chalk.cyan.bold('  Top Suggestions:'));
+    const seen = new Set<string>();
+    for (const sug of highImpact) {
+      if (seen.has(sug.action)) continue;
+      seen.add(sug.action);
+      console.log(`  ${chalk.cyan('→')} ${sug.action}`);
+      console.log(`    ${chalk.dim(sug.detail)}`);
+    }
+    console.log('');
+  }
+}
+
+function printScoreBar(label: string, score: number, max: number): void {
   const pct = score / max;
   const barWidth = 20;
   const filled = Math.round(pct * barWidth);
