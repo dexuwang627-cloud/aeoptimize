@@ -15,7 +15,7 @@ const program = new Command();
 program
   .name('aeo')
   .description('CLI toolkit that transforms SEO-optimized websites into AI-search-ready content')
-  .version('0.4.0');
+  .version('0.5.0');
 
 // ── scan command ───────────────────────────────────────────────────
 
@@ -172,9 +172,129 @@ program
     }
   });
 
+// ── hook command ──────────────────────────────────────────────────
+
+const hookCmd = program
+  .command('hook')
+  .description('Manage pre-commit hook for AEO scoring');
+
+hookCmd
+  .command('install')
+  .description('Install pre-commit hook that checks AEO score')
+  .option('--min-score <score>', 'Minimum AEO score to pass (default: 60)', '60')
+  .action(async (options: { minScore: string }) => {
+    const minScore = parseInt(options.minScore, 10);
+    if (isNaN(minScore) || minScore < 0 || minScore > 100) {
+      console.error(chalk.red('Error: --min-score must be 0-100'));
+      process.exit(1);
+    }
+
+    const hookScript = `#!/bin/sh
+# aeoptimize pre-commit hook — checks AEO score of staged HTML/MD files
+MIN_SCORE=${minScore}
+
+# Find staged HTML and MD files
+FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\\.(html|htm|md|mdx)$')
+if [ -z "$FILES" ]; then
+  exit 0
+fi
+
+echo "[aeoptimize] Checking AEO score of staged files..."
+
+FAILED=0
+for FILE in $FILES; do
+  SCORE=$(npx aeoptimize scan "$FILE" --dir --json 2>/dev/null | node -e "
+    try { const j=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(j.overall.total); }
+    catch(e) { console.log(-1); }
+  ")
+  if [ "$SCORE" = "-1" ]; then
+    continue
+  fi
+  if [ "$SCORE" -lt "$MIN_SCORE" ]; then
+    echo "[aeoptimize] FAIL: $FILE scored $SCORE/100 (minimum: $MIN_SCORE)"
+    FAILED=1
+  else
+    echo "[aeoptimize] PASS: $FILE scored $SCORE/100"
+  fi
+done
+
+if [ "$FAILED" = "1" ]; then
+  echo ""
+  echo "[aeoptimize] Commit blocked. Fix AEO issues or bypass with: git commit --no-verify"
+  exit 1
+fi
+`;
+
+    const gitDir = await findGitDir();
+    if (!gitDir) {
+      console.error(chalk.red('Error: Not a git repository. Run this from a project with .git/'));
+      process.exit(1);
+    }
+
+    const hookPath = join(gitDir, 'hooks', 'pre-commit');
+
+    // Check if hook already exists
+    try {
+      const existing = await readFile(hookPath, 'utf-8');
+      if (existing.includes('aeoptimize')) {
+        console.log(chalk.yellow('Hook already installed. Updating...'));
+      } else {
+        // Append to existing hook
+        await writeFile(hookPath, existing + '\n' + hookScript, { mode: 0o755 });
+        console.log(chalk.green(`Pre-commit hook appended to existing hook (min score: ${minScore})`));
+        return;
+      }
+    } catch {
+      // No existing hook
+    }
+
+    await mkdir(join(gitDir, 'hooks'), { recursive: true });
+    await writeFile(hookPath, hookScript, { mode: 0o755 });
+    console.log(chalk.green(`Pre-commit hook installed (min score: ${minScore})`));
+    console.log(chalk.dim(`  Hook location: ${hookPath}`));
+    console.log(chalk.dim(`  To uninstall: npx aeoptimize hook uninstall`));
+  });
+
+hookCmd
+  .command('uninstall')
+  .description('Remove aeoptimize pre-commit hook')
+  .action(async () => {
+    const gitDir = await findGitDir();
+    if (!gitDir) {
+      console.error(chalk.red('Error: Not a git repository.'));
+      process.exit(1);
+    }
+
+    const hookPath = join(gitDir, 'hooks', 'pre-commit');
+    try {
+      const existing = await readFile(hookPath, 'utf-8');
+      if (!existing.includes('aeoptimize')) {
+        console.log(chalk.yellow('No aeoptimize hook found.'));
+        return;
+      }
+      // If the whole file is our hook, remove it
+      if (existing.includes('# aeoptimize pre-commit hook')) {
+        const { unlink } = await import('node:fs/promises');
+        await unlink(hookPath);
+        console.log(chalk.green('Pre-commit hook removed.'));
+      }
+    } catch {
+      console.log(chalk.yellow('No pre-commit hook found.'));
+    }
+  });
+
 program.parse();
 
 // ── Helpers ────────────────────────────────────────────────────────
+
+async function findGitDir(): Promise<string | null> {
+  const { execSync } = await import('node:child_process');
+  try {
+    return execSync('git rev-parse --git-dir', { encoding: 'utf-8' }).trim();
+  } catch {
+    return null;
+  }
+}
 
 function resolveTarget(target: string, isDir?: boolean): ScanTarget {
   if (isDir) {

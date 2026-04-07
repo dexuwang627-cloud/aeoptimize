@@ -122,6 +122,40 @@ Build 時自動生成 `llms.txt`、`llms-full.txt`、`_aeo/generated-schemas.jso
 
 Options: `{ silent?: boolean; outDir?: string }`
 
+## Guardrails
+
+### Pre-commit Hook
+
+```bash
+npx aeoptimize hook install                # Default: min score 60
+npx aeoptimize hook install --min-score 80 # Custom threshold
+npx aeoptimize hook uninstall              # Remove hook
+```
+
+Automatically checks AEO score of staged `.html` and `.md` files before each commit. Blocks commit if any file scores below the threshold.
+
+Works with husky too — add to your `.husky/pre-commit`:
+```bash
+npx aeoptimize scan ./dist --dir --json | node -e "const j=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); if(j.overall.total<60){console.error('AEO score too low:',j.overall.total);process.exit(1)}"
+```
+
+### GitHub Action
+
+```yaml
+# .github/workflows/aeo.yml
+name: AEO Check
+on: [pull_request]
+jobs:
+  aeo:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dexuwang627-cloud/aeoptimize/action@main
+        with:
+          path: dist
+          min-score: 60
+```
+
 ## Claude Code Skills
 
 ```bash

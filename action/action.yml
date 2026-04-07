@@ -1,0 +1,46 @@
+name: 'AEO Score Check'
+description: 'Check AI readability score of your website build output using aeoptimize'
+branding:
+  icon: 'search'
+  color: 'blue'
+
+inputs:
+  path:
+    description: 'Path to scan (build output directory)'
+    required: true
+    default: 'dist'
+  min-score:
+    description: 'Minimum AEO score to pass (0-100)'
+    required: false
+    default: '60'
+  fail-on-low-score:
+    description: 'Fail the action if score is below min-score'
+    required: false
+    default: 'true'
+
+outputs:
+  score:
+    description: 'Overall AEO score (0-100)'
+  report:
+    description: 'Full JSON report'
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Run AEO scan
+      shell: bash
+      run: |
+        REPORT=$(npx aeoptimize@latest scan "${{ inputs.path }}" --dir --json 2>/dev/null)
+        SCORE=$(echo "$REPORT" | node -e "const j=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(j.overall.total)")
+
+        echo "score=$SCORE" >> $GITHUB_OUTPUT
+        echo "report<<EOF" >> $GITHUB_OUTPUT
+        echo "$REPORT" >> $GITHUB_OUTPUT
+        echo "EOF" >> $GITHUB_OUTPUT
+
+        echo "::notice::AEO Score: $SCORE/100 (minimum: ${{ inputs.min-score }})"
+
+        if [ "${{ inputs.fail-on-low-score }}" = "true" ] && [ "$SCORE" -lt "${{ inputs.min-score }}" ]; then
+          echo "::error::AEO score $SCORE is below minimum ${{ inputs.min-score }}"
+          exit 1
+        fi
