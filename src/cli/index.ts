@@ -248,7 +248,7 @@ function printDimensionBar(label: string, score: number, max: number): void {
 function printSkillCta(): void {
   console.log(chalk.dim('  ─────────────────────────────────────────'));
   console.log(chalk.dim('  Want AI-powered fixes? Install as Claude Code skill:'));
-  console.log(chalk.white('    claude plugin marketplace add dexuwang627-cloud/aeo-cli'));
+  console.log(chalk.white('    claude plugin marketplace add dexuwang627-cloud/aeoptimize'));
   console.log(chalk.dim('  Then use: /aeo-scan, /aeo-generate, /aeo-transform'));
   console.log('');
 }

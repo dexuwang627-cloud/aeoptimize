@@ -5,8 +5,8 @@
   "author": {
     "name": "Te-Shu Wang"
   },
-  "homepage": "https://github.com/dexuwang627-cloud/aeo-cli",
-  "repository": "https://github.com/dexuwang627-cloud/aeo-cli",
+  "homepage": "https://github.com/dexuwang627-cloud/aeoptimize",
+  "repository": "https://github.com/dexuwang627-cloud/aeoptimize",
   "license": "MIT",
   "keywords": ["aeo", "seo", "ai-search", "llms-txt", "structured-data", "claude-code-skill"]
 }

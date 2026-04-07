@@ -25,13 +25,13 @@ Generate AI infrastructure files from existing website content to make it discov
 
 2. **Preview first.** Run:
    ```
-   npx @cucuwang/aeo-cli generate <dir> --dry-run
+   npx aeoptimize generate <dir> --dry-run
    ```
    Show the user what will be generated and explain each file's purpose.
 
 3. **Confirm and generate.** On approval:
    ```
-   npx @cucuwang/aeo-cli generate <dir>
+   npx aeoptimize generate <dir>
    ```
 
 4. **Review generated files.** Read each generated file and suggest manual refinements:

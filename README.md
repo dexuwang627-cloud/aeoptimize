@@ -8,13 +8,13 @@ AI search engines (ChatGPT, Perplexity, Google AI Overview) don't rank pages —
 
 ```bash
 # Scan any website
-npx @cucuwang/aeo-cli scan https://your-site.com
+npx aeoptimize scan https://your-site.com
 
 # Scan local build output
-npx @cucuwang/aeo-cli scan ./dist
+npx aeoptimize scan ./dist
 
 # Generate AI infrastructure files
-npx @cucuwang/aeo-cli generate ./dist
+npx aeoptimize generate ./dist
 ```
 
 ## What It Does
@@ -32,9 +32,9 @@ Analyzes your content across 5 dimensions and gives a 0-100 score:
 | **Content Density** | 15 | Content vs boilerplate, keyword stuffing detection |
 
 ```bash
-npx @cucuwang/aeo-cli scan https://example.com        # Remote URL
-npx @cucuwang/aeo-cli scan ./dist                      # Local directory
-npx @cucuwang/aeo-cli scan ./dist --json               # Machine-readable output
+npx aeoptimize scan https://example.com        # Remote URL
+npx aeoptimize scan ./dist                      # Local directory
+npx aeoptimize scan ./dist --json               # Machine-readable output
 ```
 
 ### `aeo generate` — AI Infrastructure Files
@@ -47,9 +47,9 @@ Generates everything AI crawlers need to understand your site:
 - **robots.txt suggestions** — AI crawler allow/deny rules
 
 ```bash
-npx @cucuwang/aeo-cli generate ./dist --dry-run        # Preview first
-npx @cucuwang/aeo-cli generate ./dist                  # Write files
-npx @cucuwang/aeo-cli generate ./dist --json           # Machine-readable
+npx aeoptimize generate ./dist --dry-run        # Preview first
+npx aeoptimize generate ./dist                  # Write files
+npx aeoptimize generate ./dist --json           # Machine-readable
 ```
 
 ### `aeo transform` — AI Content Restructuring (Skill Only)
@@ -67,7 +67,7 @@ Available as a Claude Code skill — uses your existing subscription, no extra c
 Install as a Claude Code plugin for interactive, AI-powered optimization:
 
 ```bash
-claude plugin marketplace add dexuwang627-cloud/aeo-cli
+claude plugin marketplace add dexuwang627-cloud/aeoptimize
 ```
 
 Then use in any conversation:

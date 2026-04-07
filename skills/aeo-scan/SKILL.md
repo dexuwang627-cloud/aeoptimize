@@ -23,7 +23,7 @@ Scan a website or build directory and produce an interactive AI readability repo
 
 2. **Run scan.** Execute:
    ```
-   npx @cucuwang/aeo-cli scan <target> --json
+   npx aeoptimize scan <target> --json
    ```
 
 3. **Present results.** Summarize the overall score and highlight:
