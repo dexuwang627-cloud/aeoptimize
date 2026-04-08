@@ -1,6 +1,6 @@
 {
   "name": "aeoptimize",
-  "version": "0.5.0",
+  "version": "0.5.1",
   "description": "CLI toolkit that transforms SEO-optimized websites into AI-search-ready content",
   "type": "module",
   "main": "./dist/core/index.js",

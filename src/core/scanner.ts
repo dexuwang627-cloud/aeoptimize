@@ -1,5 +1,7 @@
 import * as cheerio from 'cheerio';
 import matter from 'gray-matter';
+import { execSync } from 'node:child_process';
+import { accessSync } from 'node:fs';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { join, extname } from 'node:path';
 import type {
@@ -286,7 +288,6 @@ async function checkLlmsTxt(url: string): Promise<boolean> {
 }
 
 function findChromePath(): string | null {
-  const { execSync } = require('node:child_process');
   const candidates = process.platform === 'darwin'
     ? ['/Applications/Google Chrome.app/Contents/MacOS/Google Chrome', '/Applications/Chromium.app/Contents/MacOS/Chromium']
     : process.platform === 'win32'
@@ -294,7 +295,7 @@ function findChromePath(): string | null {
       : ['/usr/bin/google-chrome', '/usr/bin/chromium-browser', '/usr/bin/chromium'];
 
   for (const p of candidates) {
-    try { require('node:fs').accessSync(p); return p; } catch { /* next */ }
+    try { accessSync(p); return p; } catch { /* next */ }
   }
   // Try `which`
   try { return execSync('which google-chrome || which chromium', { encoding: 'utf-8' }).trim() || null; } catch { return null; }

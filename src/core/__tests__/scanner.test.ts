@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseHtml, parseMarkdown, scanDocument, scanFile, scanDirectory } from '../scanner.js';
+import { parseHtml, parseMarkdown, scanDocument, scanFile, scanDirectory, scan } from '../scanner.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(__dirname, 'fixtures');
@@ -107,5 +107,15 @@ describe('scanDirectory', () => {
     expect(report.overall.total).toBeGreaterThan(0);
     expect(report.summary).toContain('/100');
     expect(report.timestamp).toBeTruthy();
+  });
+});
+
+describe('scan', () => {
+  it('scans a single file target', async () => {
+    const report = await scan({ type: 'file', path: join(fixtures, 'good-page.html') });
+
+    expect(report.pages).toHaveLength(1);
+    expect(report.overall.total).toBeGreaterThan(0);
+    expect(report.summary).toContain('/100');
   });
 });

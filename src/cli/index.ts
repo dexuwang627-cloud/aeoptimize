@@ -203,7 +203,7 @@ echo "[aeoptimize] Checking AEO score of staged files..."
 
 FAILED=0
 for FILE in $FILES; do
-  SCORE=$(npx aeoptimize scan "$FILE" --dir --json 2>/dev/null | node -e "
+  SCORE=$(npx aeoptimize scan "$FILE" --json 2>/dev/null | node -e "
     try { const j=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(j.overall.total); }
     catch(e) { console.log(-1); }
   ")
@@ -302,6 +302,10 @@ function resolveTarget(target: string, isDir?: boolean): ScanTarget {
   }
   if (target.startsWith('http://') || target.startsWith('https://')) {
     return { type: 'url', path: target };
+  }
+  const extension = extname(target).toLowerCase();
+  if (['.html', '.htm', '.md', '.mdx'].includes(extension)) {
+    return { type: 'file', path: target };
   }
   // Bare domain (contains a dot, no path separator) → treat as URL
   if (target.includes('.') && !target.includes('/') && !target.includes('\\')) {
