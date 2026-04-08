@@ -40,6 +40,11 @@
     "vite-plugin",
     "nextjs-plugin"
   ],
+  "homepage": "https://github.com/dexuwang627-cloud/aeoptimize",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dexuwang627-cloud/aeoptimize.git"
+  },
   "license": "MIT",
   "engines": {
     "node": ">=18.0.0"
