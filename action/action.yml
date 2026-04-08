@@ -30,7 +30,7 @@ runs:
     - name: Run AEO scan
       shell: bash
       run: |
-        REPORT=$(npx aeoptimize@latest scan "${{ inputs.path }}" --dir --json 2>/dev/null)
+        REPORT=$(node "$GITHUB_ACTION_PATH/../dist/cli/index.js" scan "${{ inputs.path }}" --dir --json 2>/dev/null)
         SCORE=$(echo "$REPORT" | node -e "const j=JSON.parse(require('fs').readFileSync('/dev/stdin','utf8')); console.log(j.overall.total)")
 
         echo "score=$SCORE" >> $GITHUB_OUTPUT

@@ -269,18 +269,46 @@ function validateUrl(raw: string): URL {
   if (u.protocol !== 'https:' && u.protocol !== 'http:') {
     throw new Error(`Unsupported scheme: ${u.protocol}. Only http and https are allowed.`);
   }
-  const blocked = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|localhost$)/i;
-  if (blocked.test(u.hostname)) {
+  if (isBlockedHostname(u.hostname)) {
     throw new Error('Scanning private/loopback addresses is not allowed.');
   }
   return u;
+}
+
+function isBlockedHostname(hostname: string): boolean {
+  const blocked = /^(127\.|10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.|169\.254\.|::1$|localhost$)/i;
+  return blocked.test(hostname);
+}
+
+async function fetchWithSafeRedirects(input: string | URL, init?: RequestInit, maxRedirects = 10): Promise<Response> {
+  let currentUrl = typeof input === 'string' ? validateUrl(input) : validateUrl(input.toString());
+
+  for (let redirectCount = 0; redirectCount <= maxRedirects; redirectCount += 1) {
+    const response = await fetch(currentUrl, { ...init, redirect: 'manual' });
+    if (response.status < 300 || response.status >= 400) {
+      return response;
+    }
+
+    if (redirectCount === maxRedirects) {
+      throw new Error(`Too many redirects while fetching ${currentUrl.toString()}`);
+    }
+
+    const location = response.headers.get('location');
+    if (!location) {
+      throw new Error(`Redirect response from ${currentUrl.toString()} missing Location header`);
+    }
+
+    currentUrl = validateUrl(new URL(location, currentUrl).toString());
+  }
+
+  throw new Error(`Too many redirects while fetching ${currentUrl.toString()}`);
 }
 
 async function checkLlmsTxt(url: string): Promise<boolean> {
   try {
     const u = new URL(url);
     const llmsUrl = `${u.protocol}//${u.host}/llms.txt`;
-    const res = await fetch(llmsUrl, { method: 'HEAD', redirect: 'follow' });
+    const res = await fetchWithSafeRedirects(llmsUrl, { method: 'HEAD' });
     return res.ok;
   } catch {
     return false;
@@ -335,7 +363,7 @@ function isSpaLikely(html: string): boolean {
 export async function scanUrl(url: string): Promise<ScanReport> {
   validateUrl(url);
   const [response, hasLlmsTxt] = await Promise.all([
-    fetch(url),
+    fetchWithSafeRedirects(url),
     checkLlmsTxt(url),
   ]);
   if (!response.ok) {

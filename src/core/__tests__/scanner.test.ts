@@ -1,11 +1,15 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterEach } from 'vitest';
 import { readFile } from 'node:fs/promises';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { parseHtml, parseMarkdown, scanDocument, scanFile, scanDirectory, scan } from '../scanner.js';
+import { parseHtml, parseMarkdown, scanDocument, scanFile, scanDirectory, scan, scanUrl } from '../scanner.js';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const fixtures = join(__dirname, 'fixtures');
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 describe('parseHtml', () => {
   it('extracts title, headings, paragraphs, and JSON-LD', async () => {
@@ -117,5 +121,31 @@ describe('scan', () => {
     expect(report.pages).toHaveLength(1);
     expect(report.overall.total).toBeGreaterThan(0);
     expect(report.summary).toContain('/100');
+  });
+});
+
+describe('scanUrl', () => {
+  it('rejects redirects to blocked private addresses', async () => {
+    const fetchMock = vi.fn(async (input: string | URL, init?: RequestInit) => {
+      const url = input.toString();
+
+      if (url === 'https://example.com/') {
+        expect(init?.redirect).toBe('manual');
+        return new Response(null, {
+          status: 302,
+          headers: { location: 'http://127.0.0.1/private' },
+        });
+      }
+
+      if (url === 'https://example.com/llms.txt') {
+        return new Response(null, { status: 404 });
+      }
+
+      throw new Error(`Unexpected fetch: ${url}`);
+    });
+
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(scanUrl('https://example.com/')).rejects.toThrow('Scanning private/loopback addresses is not allowed.');
   });
 });
